@@ -250,10 +250,8 @@ static int taprio_parse_opt(struct qdisc_util *qu, int argc,
 				} else if (strcmp(*argv, "P") == 0) {
 					fp[idx] = TC_FP_PREEMPTIBLE;
 				} else {
-					fprintf(stderr,
-						"Illegal \"fp\" value \"%s\", expected \"E\" or \"P\"\n",
-						*argv);
-					return -1;
+					PREV_ARG();
+					break;
 				}
 				num_fp_entries++;
 				idx++;
@@ -649,8 +647,32 @@ static int taprio_print_opt(struct qdisc_util *qu, FILE *f, struct rtattr *opt)
 	return 0;
 }
 
+static int taprio_print_xstats(struct qdisc_util *qu, FILE *f,
+			       struct rtattr *xstats)
+{
+	struct rtattr *tb[TCA_TAPRIO_OFFLOAD_STATS_MAX + 1], *nla;
+
+	if (!xstats)
+		return 0;
+
+	parse_rtattr_nested(tb, TCA_TAPRIO_OFFLOAD_STATS_MAX, xstats);
+
+	nla = tb[TCA_TAPRIO_OFFLOAD_STATS_WINDOW_DROPS];
+	if (nla)
+		print_lluint(PRINT_ANY, "window_drops", " window_drops %llu",
+			     rta_getattr_u64(nla));
+
+	nla = tb[TCA_TAPRIO_OFFLOAD_STATS_TX_OVERRUNS];
+	if (nla)
+		print_lluint(PRINT_ANY, "tx_overruns", " tx_overruns %llu",
+			     rta_getattr_u64(nla));
+
+	return 0;
+}
+
 struct qdisc_util taprio_qdisc_util = {
 	.id		= "taprio",
 	.parse_qopt	= taprio_parse_opt,
 	.print_qopt	= taprio_print_opt,
+	.print_xstats	= taprio_print_xstats,
 };
